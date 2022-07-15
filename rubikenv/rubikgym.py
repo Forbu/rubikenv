@@ -16,7 +16,7 @@ class rubik_cube:
     This is a rubik's cube class simulator
     
     Attributes :
-        - state : a 9x6 array of value between 1 and 6
+        - state : a 3x3x6 array of value between 1 and 6
     
     """
     
@@ -288,4 +288,7 @@ class rubikgym(gym.Env, rubik_cube):
     def set_init(self, state):
         self.init_state = state
         self.state = state
+
+    def is_solved(self):
+        return np.all(self.state == self.init_state)
         
