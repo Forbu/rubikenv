@@ -25,7 +25,7 @@ def test_dataloader():
     for i, (state, reward, reverse_action) in enumerate(dataloader):
         break
 
-    assert state.shape == torch.Size([8, 3, 3, 6])
+    assert state.shape == torch.Size([8, 9, 6])
     assert reward.shape == torch.Size([8])
     assert reverse_action.shape == torch.Size([8])
 

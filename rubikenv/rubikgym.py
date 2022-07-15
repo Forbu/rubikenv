@@ -80,6 +80,12 @@ class rubik_cube:
         
         X Y and Z corresponding to the rotation angle
         """
+        # assert if index move is between 0 and 11 and raise an error if not saying not in range
+        assert index_move in range(12), "index_move must be between 0 and 11"
+        
+        # check if index_move is an interger
+        index_move = int(index_move)
+
         value_side = index_move % 2 # entre 0 et 1 the position of the rotation on the face
         value_side_rotation = index_move // 4 # entre 0 et 2 the rotation index of the array
         value_side_inverse = (index_move % 4)//2 # entre 0 et 1 if inverse or not
@@ -260,6 +266,10 @@ class rubik_cube:
                     state[:,:,5] = np.rot90(state[:,:,5], k=3)
                     
         return state
+
+    def is_solved(self):
+        return np.all(self.state == self.init_state)
+        
 
 class rubikgym(gym.Env, rubik_cube):
     reward_range = (-1, 1)
