@@ -11,7 +11,7 @@ class RubikTransformer(pl.LightningModule):
     RubikTransformer model
     """
 
-    def __init__(self, hidden_size=64, num_layers=4, num_heads=4, dropout=0.1, spatial_embedding_size=32, color_embedding_size=32, output_size=12):
+    def __init__(self, hidden_size=128, num_layers=4, num_heads=4, dropout=0.1, spatial_embedding_size=64, color_embedding_size=64, output_size=12):
         """
         Initialize the model
         :param input_size: input size of the model
@@ -49,10 +49,8 @@ class RubikTransformer(pl.LightningModule):
         # last layer to get the value
         self.value_layer = nn.Linear(hidden_size * 9 * 6, 1)
 
-        # loss function logits and labels
+        # loss function logits and labels and value
         self.loss = nn.CrossEntropyLoss()
-
-        # loss function for value function
         self.loss_value = nn.MSELoss()
 
 
@@ -74,7 +72,7 @@ class RubikTransformer(pl.LightningModule):
         # reshape embedding from (batch, 9, 6, spatial_embedding_size + color_embedding_size) to (batch, 9*6, spatial_embedding_size + color_embedding_size)
         embedding = embedding.view(batch_size, 9 * 6, -1)
 
-        # we apply the encoder to the embedding to get a dimension of (batch, 9, hidden_size)
+        # we apply the encoder to the embedding to get a dimension of (batch, 9*6, hidden_size)
         embedding = self.encoder(embedding)
 
         # now we flatten the embedding to get a dimension of (batch, 9 * hidden_size)
@@ -151,7 +149,7 @@ class RubikDense(pl.LightningModule):
     MLP with dense layers
     """
 
-    def __init__(self, hidden_size=1024, num_layers=4, spatial_embedding_size=5, color_embedding_size=5, output_size=12):
+    def __init__(self, hidden_size=1024, color_embedding_size=5, output_size=12):
         """
         Initialize the model
         :param input_size: input size of the model
@@ -164,8 +162,6 @@ class RubikDense(pl.LightningModule):
         super(RubikDense, self).__init__()
         self.input_size = 9*6* color_embedding_size
         self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.spatial_embedding_size = spatial_embedding_size
         self.color_embedding_size = color_embedding_size
         self.output_size = output_size
 
@@ -184,6 +180,11 @@ class RubikDense(pl.LightningModule):
 
         # last layer to get the value
         self.value_layer = nn.Linear(hidden_size, 1)
+
+        # loss function logits and labels and value
+        self.loss = nn.CrossEntropyLoss()
+        self.loss_value = nn.MSELoss()
+
 
     def forward(self, state):
         """
@@ -206,8 +207,6 @@ class RubikDense(pl.LightningModule):
         # now we can apply the encoder to the embedding to get a dimension of (batch, 9 * hidden_size)
         embedding = self.encoder(embedding)
 
-        print(embedding.shape)
-
         # now we can apply the last layer of the model
         action_logits = self.last_layer(embedding)
 
@@ -224,17 +223,26 @@ class RubikDense(pl.LightningModule):
         :return:
         """
         state, reward, reverse_action = batch
-        action_logits, value = self.forward(state)
+        action_logits, value = self.forward(state.long())
 
-        loss_value = self.loss_value(value, reward)
-        loss_action = self.loss(action_logits, reverse_action) 
+        loss_value = self.loss_value(value.float(), reward.float())/10
+        loss_action = self.loss(action_logits, reverse_action.long()) 
         loss = loss_action + loss_value
 
         self.log('train_loss', loss, prog_bar=True)
         self.log('train_value', loss_value, prog_bar=True)
         self.log('train_action', loss_action, prog_bar=True)
 
-        return loss
+        return {'loss': loss}
+
+    def training_epoch_end(self, outputs):
+        """
+        At the end of the training epoch we check the average number of randomize rubik's cube solved
+        using estimate_solvability_rate
+        """
+        avg_solvability = estimate_solvability_rate(model=self, nb_try=20, batch_size=12)
+        self.log('avg_solvability', avg_solvability)
+
     
     def validation_step(self, batch, batch_idx):
         """
@@ -244,9 +252,9 @@ class RubikDense(pl.LightningModule):
         :return:
         """
         state, reward, reverse_action = batch
-        action_logits, value = self.forward(state)
-        loss_value = self.loss_value(value, reward)
-        loss_action = self.loss(action_logits, reverse_action) 
+        action_logits, value = self.forward(state.long())
+        loss_value = self.loss_value(value.float(), reward.float())/10
+        loss_action = self.loss(action_logits, reverse_action.long()) 
         loss = loss_action + loss_value
 
         self.log('val_loss', loss, prog_bar=True)
@@ -254,7 +262,6 @@ class RubikDense(pl.LightningModule):
         self.log('val_action', loss_action, prog_bar=True)
 
         return {'loss': loss}
-
 
     def configure_optimizers(self):
         """

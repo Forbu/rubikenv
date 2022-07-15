@@ -38,7 +38,7 @@ def generate_batch_action(batch_size):
 
         batch_reverse_action[idx] = compute_inverse_action(i)
         batch_state[idx] = rubik_.state
-        reward[idx] = -idx
+        reward[idx] = -idx/10.
 
     return batch_state, reward, batch_reverse_action
 

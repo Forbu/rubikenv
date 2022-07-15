@@ -6,7 +6,7 @@ import numpy as np
 import rubikenv.rubikgym as rb
 
 
-def check_solvable_for_random_shuffle(batch_size=12, model=None):
+def check_solvable_for_random_shuffle(batch_size=12, model=None, device=torch.device("cpu")):
     """
     In this method we check if the model can solve the Rubik's cube.
     :return:
@@ -30,6 +30,9 @@ def check_solvable_for_random_shuffle(batch_size=12, model=None):
 
     # we reshape the state_ to (1, 9, 6)
     state_ = state_.view(1, 9, 6)
+
+    # conversion
+    model.to(device)
 
     # we pass in inference mode
     with torch.no_grad():
@@ -68,7 +71,7 @@ def check_solvable_for_random_shuffle(batch_size=12, model=None):
 
     return 0
 
-def estimate_solvability_rate(model, nb_try, batch_size):
+def estimate_solvability_rate(model, nb_try, batch_size, device=torch.device("cpu")):
     """
     In this function we estimate success rate of the model
     :param model:
@@ -78,6 +81,6 @@ def estimate_solvability_rate(model, nb_try, batch_size):
     """
     success = 0
     for i in range(nb_try):
-        success += check_solvable_for_random_shuffle(batch_size, model)
+        success += check_solvable_for_random_shuffle(batch_size, model, device)
     return success / nb_try
 

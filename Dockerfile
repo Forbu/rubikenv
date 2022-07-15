@@ -12,7 +12,11 @@ RUN pip install gym
 RUN pip install tqdm
 RUN pip install prettytable
 
+
 ADD . /app/
+
+RUN git config --global --add safe.directory /app
+RUN git config --global --add safe.directory '*'
 
 WORKDIR /app
 RUN python setup.py install
