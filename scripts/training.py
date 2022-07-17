@@ -92,8 +92,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    #model = RubikTransformer(hidden_size=128, num_layers=4, num_heads=8, dropout=0.1, spatial_embedding_size=64, color_embedding_size=64, output_size=12)
-    model = RubikDense(hidden_size=1024, color_embedding_size=5, output_size=12)
+    model = RubikTransformer(hidden_size=256, num_layers=4, num_heads=8, dropout=0.1, spatial_embedding_size=128, color_embedding_size=128, output_size=12)
+    #model = RubikDense(hidden_size=1024, color_embedding_size=5, output_size=12)
 
     model = train_full(model=model, nb_epoch_train=100, batch_size_gen=15, nb_epoch_generate=10000, batch_size_dataloader=128)
 

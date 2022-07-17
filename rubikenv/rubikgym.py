@@ -22,7 +22,7 @@ class rubik_cube:
     
     number_of_face = 6
     number_of_element_in_sideface = 3
-    
+
     def __init__(self, init_state=None):
         """
         Initialisation of the rubik
@@ -48,7 +48,8 @@ class rubik_cube:
             self.state = init_state
             self.init_state = np.copy(init_state)
         # other ?
-        
+        self.actions_list = []
+
     def setInit(self):
         # perfect cube
         init_state = np.zeros((self.number_of_element_in_sideface, 
@@ -82,6 +83,7 @@ class rubik_cube:
         """
         # assert if index move is between 0 and 11 and raise an error if not saying not in range
         assert index_move in range(12), "index_move must be between 0 and 11"
+        self.actions_list.append(index_move)
         
         # check if index_move is an interger
         index_move = int(index_move)

@@ -33,7 +33,7 @@ class RubikTransformer(pl.LightningModule):
         assert hidden_size == color_embedding_size + spatial_embedding_size, "hidden_size and color_embedding_size + spatial_embedding_size must be equal"
 
         self.encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=hidden_size, nhead=num_heads, dim_feedforward=64), num_layers
+            nn.TransformerEncoderLayer(d_model=hidden_size, nhead=num_heads, dim_feedforward=64, batch_first=True), num_layers
         )
         
 
@@ -44,13 +44,13 @@ class RubikTransformer(pl.LightningModule):
         self.color_embedding = nn.Embedding(6, color_embedding_size)
 
         # last layer to get the action probabilities
-        self.last_layer = nn.Linear(hidden_size * 9 * 6, output_size)
+        self.last_layer = nn.Linear(hidden_size, output_size)
 
         # last layer to get the value
-        self.value_layer = nn.Linear(hidden_size * 9 * 6, 1)
+        self.value_layer = nn.Linear(hidden_size, 1)
 
         # loss function logits and labels and value
-        self.loss = nn.CrossEntropyLoss()
+        self.loss = nn.CrossEntropyLoss(label_smoothing=0.05)
         self.loss_value = nn.MSELoss()
 
 
@@ -75,8 +75,8 @@ class RubikTransformer(pl.LightningModule):
         # we apply the encoder to the embedding to get a dimension of (batch, 9*6, hidden_size)
         embedding = self.encoder(embedding)
 
-        # now we flatten the embedding to get a dimension of (batch, 9 * hidden_size)
-        embedding = embedding.view(batch_size, -1)
+        # now we compute the mean of the hidden size to get a dimension of (batch, hidden_size)
+        embedding = embedding.mean(dim=1)
 
         # now we can apply the last layer of the model
         action_logits = self.last_layer(embedding)
@@ -96,7 +96,7 @@ class RubikTransformer(pl.LightningModule):
         state, reward, reverse_action = batch
         action_logits, value = self.forward(state.long())
 
-        loss_value = self.loss_value(value.float(), reward.float())/10
+        loss_value = self.loss_value(value.float(), reward.float())
         loss_action = self.loss(action_logits, reverse_action.long()) 
         loss = loss_action + loss_value
 
@@ -182,7 +182,7 @@ class RubikDense(pl.LightningModule):
         self.value_layer = nn.Linear(hidden_size, 1)
 
         # loss function logits and labels and value
-        self.loss = nn.CrossEntropyLoss()
+        self.loss = nn.CrossEntropyLoss(label_smoothing=0.05)
         self.loss_value = nn.MSELoss()
 
 
@@ -225,7 +225,7 @@ class RubikDense(pl.LightningModule):
         state, reward, reverse_action = batch
         action_logits, value = self.forward(state.long())
 
-        loss_value = self.loss_value(value.float(), reward.float())/10
+        loss_value = self.loss_value(value.float(), reward.float())
         loss_action = self.loss(action_logits, reverse_action.long()) 
         loss = loss_action + loss_value
 

@@ -1,0 +1,1 @@
+docker cp script/generate_dataset.py 46a3bb422b35:/app/script/
