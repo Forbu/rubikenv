@@ -1,4 +1,5 @@
 from rubikenv.generate_dataset import generate_and_save_dataset, generate_full_dataset_history
+from rubikenv.generate_dataset import generate_full_dataset_history_trainOptim_format
 import unittest
 
 from torch.utils.data import DataLoader
@@ -28,6 +29,26 @@ def test_dataloader():
     assert state.shape == torch.Size([8, 9, 6])
     assert reward.shape == torch.Size([8])
     assert reverse_action.shape == torch.Size([8])
+
+def test_dataloader_searchOptim():
+    """
+    test for the dataloader of the search optim model
+    """
+
+    nb_shuffle = 10
+    batch_size = 8
+    nb_epoch = 30
+
+    dataset, reward = generate_full_dataset_history_trainOptim_format(nb_shuffle=nb_shuffle, nb_epoch=nb_epoch)
+
+    dataset = TensorDataset(torch.from_numpy(dataset), torch.from_numpy(reward))
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    for i, (state, reward) in enumerate(dataloader):
+        break
+
+    assert state.shape == torch.Size([batch_size, nb_shuffle, 3*3*6])
+    assert reward.shape == torch.Size([batch_size, nb_shuffle, 1])
 
 
 # launching the test

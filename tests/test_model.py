@@ -5,6 +5,7 @@ from rubikenv.rubikgym import rubik_cube
 from rubikenv.generate_dataset import generate_full_dataset_history
 from rubikenv.models import RubikTransformer
 from rubikenv.models import RubikDense
+from rubikenv.models_searchOptim import RubikTransformer_search
 
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset, TensorDataset
@@ -50,6 +51,24 @@ def test_model():
 
     assert action_logit.shape == torch.Size([8, 12])
     assert value.shape == torch.Size([8, 1])
+
+def test_model_searchOptim():
+    """
+    We test the forward pass of the RubikTransformer_searchOptim
+    """
+    model = RubikTransformer_search()
+    model.eval()
+
+    batch_size = 16
+    nb_state = 12
+
+    # we init the state tensor
+    state_input = torch.randint(0, 6, (batch_size, nb_state, 3*3*6))
+
+    values = model(state_input)
+
+    assert values.shape == torch.Size([batch_size, nb_state, 1])
+    
 
 # launching the test
 if __name__ == '__main__':
