@@ -11,7 +11,7 @@ class RubikTransformer_search(pl.LightningModule):
     RubikTransformer model for search among state node
     """
 
-    def __init__(self, hidden_size=256, num_layers=4, num_heads=4, dropout=0.1, color_embedding_size=256, output_size=12):
+    def __init__(self, hidden_size=256, num_layers=4, num_heads=4, dropout=0.1, color_embedding_size=256):
         """
         Initialize the model
         :param input_size: input size of the model
@@ -27,7 +27,6 @@ class RubikTransformer_search(pl.LightningModule):
         self.num_heads = num_heads
         self.dropout = dropout
         self.color_embedding_size = color_embedding_size
-        self.output_size = output_size
 
         self.encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(d_model=hidden_size, nhead=num_heads, dim_feedforward=128, batch_first=True), num_layers
@@ -39,8 +38,6 @@ class RubikTransformer_search(pl.LightningModule):
         # first layer of the model
         self.first_layer = nn.Linear(3*3*6*color_embedding_size, hidden_size)
 
-        # last layer to get the action probabilities
-        self.last_layer = nn.Linear(hidden_size, output_size)
 
         # last layer to get the value
         self.value_layer = nn.Linear(hidden_size, 1)
@@ -87,7 +84,7 @@ class RubikTransformer_search(pl.LightningModule):
 
         loss = self.loss_value(value.float(), reward.float())
 
-        self.log('train_loss', loss, prog_bar=True)
+        self.log('train_loss_value', loss, prog_bar=True)
 
         return {'loss': loss}
 
@@ -109,7 +106,7 @@ class RubikTransformer_search(pl.LightningModule):
         value = self.forward(state.long())
         loss = self.loss_value(value.float(), reward.float())/10
 
-        self.log('val_loss', loss, prog_bar=True)
+        self.log('val_loss_value', loss, prog_bar=True)
 
         return {'loss': loss}
 

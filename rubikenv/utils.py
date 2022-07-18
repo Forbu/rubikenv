@@ -99,7 +99,7 @@ def inference_model(model, rubik_cube):
     states_to_explore = [state_init]
 
     # init the iterative limit and increment it each time we add a new state to explore
-    iter_limit = 100
+    iter_limit = 50
     iter_increment = 0
 
     while iter_increment < iter_limit:
@@ -122,7 +122,10 @@ def inference_model(model, rubik_cube):
         # if the state have already been explored we do not add it to the list of states to explore
 
         # check if the resulting state is a terminal state
-        if rubik_cube.is_terminal(states_to_explore[index_best_state]):
+        state_selected = states_to_explore[index_best_state]
+        
+        rubik_cube_selected = rubik_cube(state_selected)
+        if rubik_cube_selected.is_solved():
             return 1
 
         # now we retrieve the corresponding state to explore
@@ -156,3 +159,31 @@ def generate_all_next_states(init_state):
         states_new.append(rubik_cube.state)
 
     return states_new
+
+def randomize_rubik_cube(nb_shuffle):
+    """
+    We return a randomize rubik's cube
+    """
+    # we init the rubik
+    rubik_ = rb.rubik_cube()
+    # we init the batch of action
+    batch_action = np.random.randint(0, 12, nb_shuffle)
+    # we apply the batch of action to the rubik_cube
+    for idx, i in enumerate(batch_action):
+        rubik_.move(i)
+    return rubik_
+
+def estimate_solvability_rate_searchOptim(model, nb_try, device=torch.device("cpu"), nb_shuffle=12):
+    """
+    In this function we estimate success rate of the model
+    :param model:
+    :param nb_try:
+    :param nb_shuffle:
+    :return:
+    """
+    model = model.to(device)
+    success = 0
+    for i in range(nb_try):
+        rubik_cube = randomize_rubik_cube(nb_shuffle=nb_shuffle)
+        success += inference_model(model, rubik_cube)
+    return success / nb_try
