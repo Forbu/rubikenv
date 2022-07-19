@@ -12,6 +12,7 @@ from torch.utils.data import Dataset, TensorDataset
 import torch
 
 import pytorch_lightning as pl
+from rubikenv.utils import estimate_solvability_rate_searchOptim
 
 import unittest
 
@@ -69,6 +70,17 @@ def test_model_searchOptim():
 
     assert values.shape == torch.Size([batch_size, nb_state, 1])
     
+def test_model_searchOptim_trainOptim():
+
+    # we init the model
+    model = RubikTransformer_search()
+    model.eval()   
+
+    nb_shuffle = 10
+    nb_try = 2
+
+    # we use estimate_solvability_rate_searchOptim to see if the model is able to solve the Rubik's cube
+    estimate_solvability_rate_searchOptim(model, nb_try=nb_try, nb_shuffle=nb_shuffle)
 
 # launching the test
 if __name__ == '__main__':
