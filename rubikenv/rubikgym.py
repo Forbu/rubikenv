@@ -10,6 +10,14 @@ import pandas as pd
 import gym
 from gym import spaces
 
+state_solved = np.zeros((3, 
+            3, 6))
+            
+for i in range(6):
+    state_solved[:,:,i] = i
+
+state_solved = state_solved.astype(int)
+
 class rubik_cube:
     
     """
@@ -270,7 +278,7 @@ class rubik_cube:
         return state
 
     def is_solved(self):
-        return np.all(self.state == self.init_state)
+        return np.all(self.state == state_solved)
         
 
 class rubikgym(gym.Env, rubik_cube):

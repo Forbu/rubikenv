@@ -82,6 +82,8 @@ def test_model_searchOptim_trainOptim():
     # we use estimate_solvability_rate_searchOptim to see if the model is able to solve the Rubik's cube
     estimate_solvability_rate_searchOptim(model, nb_try=nb_try, nb_shuffle=nb_shuffle)
 
+    
+
 # launching the test
 if __name__ == '__main__':
     unittest.main()

@@ -6,8 +6,10 @@ import numpy as np
 import rubikenv.rubikgym as rb
 from einops import rearrange
 
+from rubikenv.rubikgym import rubik_cube
 
-def check_solvable_for_random_shuffle(batch_size=12, model=None, device=torch.device("cpu")):
+
+def check_solvable_for_random_shuffle(batch_size=12, model=None, device=torch.device("cpu"), nb_try_limit=40):
     """
     In this method we check if the model can solve the Rubik's cube.
     :return:
@@ -40,7 +42,7 @@ def check_solvable_for_random_shuffle(batch_size=12, model=None, device=torch.de
 
         iteration = 0
         # we recurrently apply the model to the state_ until the state_ is solved
-        while not rubik_.is_solved() and iteration <= 30:
+        while not rubik_.is_solved() and iteration <= nb_try_limit:
 
             # we get the action logits and value
             action_logits, value = model.forward(state_)
@@ -85,30 +87,34 @@ def estimate_solvability_rate(model, nb_try, batch_size, device=torch.device("cp
         success += check_solvable_for_random_shuffle(batch_size, model, device)
     return success / nb_try
 
-
-
-def inference_model(model, rubik_cube):
+def inference_model(model, rubikcube, iter_limit = 50):
     """
     We generate the dataset with an inference model (using the searchOptim procedure)
     """
 
     # we state from the rubik_cube the state of the environment that we convert into a tensor
-    state_init = rubik_cube.state
+    state_init = rubikcube.state
 
     # Init the list of states to explore
     states_to_explore = [state_init]
 
-    # init the iterative limit and increment it each time we add a new state to explore
-    iter_limit = 50
+    # init the iterative limit and increment it each time we add a new state to explore  
     iter_increment = 0
 
     while iter_increment < iter_limit:
 
+        print("iter_increment : ", iter_increment)
+
         # we evaluate all the state in the state to explore list with the model
         states_to_explore_tensor = torch.tensor(states_to_explore, dtype=torch.float32)
+
+        if len(states_to_explore_tensor.shape) == 5:
+            states_to_explore_tensor = states_to_explore_tensor.squeeze(0)
         
         # the states_to_explore_tensor is a tensor of shape (nb_state, 3, 3, 6) of int type we convert it into a tensor of shape (1, nb_state, 3 * 3 * 6)
-        states_to_explore_tensor = rearrange(states_to_explore_tensor, "nb_state a b c -> batch nb_state (a b c)", batch=1)
+        states_to_explore_tensor = rearrange(states_to_explore_tensor, "nb_state a b c -> nb_state (a b c)")
+
+        states_to_explore_tensor = states_to_explore_tensor.unsqueeze(0).long()
 
         # we evaluate the model
         values_nodes = model(states_to_explore_tensor)
@@ -116,6 +122,7 @@ def inference_model(model, rubik_cube):
         # now we can greedly explore the best action
         # we get the index of the best state to explore
         # TODO add randomize element (softmax) to explore randomly sometimes
+
         index_best_state = torch.argmax(values_nodes[0, :, 0])
 
         # TODO : cut the list of states to explore to limit the size of the list to 100 (later)
@@ -131,9 +138,12 @@ def inference_model(model, rubik_cube):
         # now we retrieve the corresponding state to explore
         state_to_explore = states_to_explore[index_best_state]
 
+        # we remove the state from the list of states to explore
+        states_to_explore.pop(index_best_state)
+
         # first we add the state to the list of states to explore
         node_toexplore = generate_all_next_states(state_to_explore)
-        states_to_explore.append(node_toexplore)
+        states_to_explore = states_to_explore + node_toexplore
 
         iter_increment += 1
 
@@ -148,15 +158,15 @@ def generate_all_next_states(init_state):
     states_new = []
 
     # 2. We generate all the possible actions
-    actions = np.aranges(12)
+    actions = np.arange(12)
 
     # 3. We apply the actions to the rubik's cube
     for action in actions:
 
-        rubik_cube = rubik_cube(init_state)
-        rubik_cube.move(action)
+        rubikcube = rubik_cube(np.copy(init_state))
+        rubikcube.move(action)
 
-        states_new.append(rubik_cube.state)
+        states_new.append(rubikcube.state)
 
     return states_new
 
@@ -184,6 +194,6 @@ def estimate_solvability_rate_searchOptim(model, nb_try, device=torch.device("cp
     model = model.to(device)
     success = 0
     for i in range(nb_try):
-        rubik_cube = randomize_rubik_cube(nb_shuffle=nb_shuffle)
-        success += inference_model(model, rubik_cube)
+        rubikcube = randomize_rubik_cube(nb_shuffle=nb_shuffle)
+        success += inference_model(model, rubikcube)
     return success / nb_try

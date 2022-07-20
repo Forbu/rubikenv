@@ -21,7 +21,7 @@ from torch.utils.data import Dataset, TensorDataset
 from rubikenv.generate_dataset import generate_full_dataset_history_trainOptim_format
 from rubikenv.rubikgym import rubik_cube
 from rubikenv.models_searchOptim import RubikTransformer_search
-from rubikenv.utils import check_solvable_for_random_shuffle
+from rubikenv.utils import check_solvable_for_random_shuffle, estimate_solvability_rate_searchOptim
 
 import wandb
 import pytorch_lightning as pl
@@ -90,6 +90,8 @@ def training_model_full(model, nb_epoch_train_randomize, batch_size_gen, nb_epoc
 
     model_init = train_init_model(model, nb_epoch_train_randomize, batch_size_gen, nb_epoch_generate, batch_size_dataloader, wandb_logger)
 
+    return model_init
+
 if __name__ == '__main__':
 
     # here we retrieve the arguments
@@ -97,7 +99,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size_gen', type=int, default=15)
     parser.add_argument('--nb_epoch_generate', type=int, default=10000)
     parser.add_argument('--batch_size_dataloader', type=int, default=16)
-    parser.add_argument('--nb_epoch_train_randomize', type=int, default=10)
+    parser.add_argument('--nb_epoch_train_randomize', type=int, default=2)
 
     # parse arguments to get the value of nb_try and nb_shuffle for evaluation
     parser.add_argument('--nb_try', type=int, default=2)
@@ -120,7 +122,7 @@ if __name__ == '__main__':
     nb_try = args.nb_try
     nb_shuffle = args.nb_shuffle
 
-    performance = check_solvable_for_random_shuffle(model, nb_try=nb_try, nb_shuffle=nb_shuffle)
+    performance = estimate_solvability_rate_searchOptim(model, nb_try=nb_try, nb_shuffle=nb_shuffle)
     print("performance :")
     print(performance)
 
