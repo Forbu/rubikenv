@@ -115,4 +115,4 @@ class RubikTransformer_search(pl.LightningModule):
         return the optimizer and the scheduler
         :return:
         """
-        return torch.optim.Adam(self.parameters(), lr=0.001)
+        return torch.optim.AdamW(self.parameters(), lr=0.001)
