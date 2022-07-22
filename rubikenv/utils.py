@@ -8,7 +8,6 @@ from einops import rearrange
 
 from rubikenv.rubikgym import rubik_cube
 
-
 def check_solvable_for_random_shuffle(batch_size=12, model=None, device=torch.device("cpu"), nb_try_limit=40):
     """
     In this method we check if the model can solve the Rubik's cube.
@@ -87,7 +86,7 @@ def estimate_solvability_rate(model, nb_try, batch_size, device=torch.device("cp
         success += check_solvable_for_random_shuffle(batch_size, model, device)
     return success / nb_try
 
-def inference_model(model, rubikcube, iter_limit = 50):
+def inference_model(model, rubikcube, iter_limit = 300, device=torch.device("cuda")):
     """
     We generate the dataset with an inference model (using the searchOptim procedure)
     """
@@ -98,8 +97,15 @@ def inference_model(model, rubikcube, iter_limit = 50):
     # Init the list of states to explore
     states_to_explore = [state_init]
 
+    # list of node / state already explored
+    states_already_explored = []
+
     # init the iterative limit and increment it each time we add a new state to explore  
     iter_increment = 0
+
+    # retrieve best state
+    best_state = None
+    best_value = -1
 
     while iter_increment < iter_limit:
 
@@ -117,6 +123,7 @@ def inference_model(model, rubikcube, iter_limit = 50):
         states_to_explore_tensor = states_to_explore_tensor.unsqueeze(0).long()
 
         # we evaluate the model
+        states_to_explore_tensor = states_to_explore_tensor.to(device)
         values_nodes = model(states_to_explore_tensor)
 
         # now we can greedly explore the best action
@@ -125,12 +132,19 @@ def inference_model(model, rubikcube, iter_limit = 50):
 
         index_best_state = torch.argmax(values_nodes[0, :, 0])
 
+        if values_nodes[0, index_best_state, 0] > best_value:
+          best_value = values_nodes[0, index_best_state, 0]
+          best_state = np.copy(states_to_explore[index_best_state])
+
         # TODO : cut the list of states to explore to limit the size of the list to 100 (later)
         # if the state have already been explored we do not add it to the list of states to explore
 
         # check if the resulting state is a terminal state
         state_selected = states_to_explore[index_best_state]
-        
+
+        # we print the hash of the selected node
+        states_already_explored.append(hash(str(state_selected)))
+
         rubik_cube_selected = rubik_cube(state_selected)
         if rubik_cube_selected.is_solved():
             return 1
@@ -141,9 +155,20 @@ def inference_model(model, rubikcube, iter_limit = 50):
         # we remove the state from the list of states to explore
         states_to_explore.pop(index_best_state)
 
+
+        # if they is more than 200 nodes we delete everything above (choosing the worst vakues)
+        b, nb_node, value_nodes_all = values_nodes.shape
+
+        if nb_node > 200:
+          value_tmp, indice_tmp = torch.topk(-values_nodes[0, :, 0], k=nb_node - 200)
+          states_to_explore = [state.copy() for idx, state in enumerate(states_to_explore) if idx not in indice_tmp]
+
         # first we add the state to the list of states to explore
         node_toexplore = generate_all_next_states(state_to_explore)
-        states_to_explore = states_to_explore + node_toexplore
+
+        node_toexplore_update = [state.copy() for state in node_toexplore if hash(str(state)) not in states_already_explored]
+
+        states_to_explore = states_to_explore + node_toexplore_update
 
         iter_increment += 1
 
@@ -195,5 +220,5 @@ def estimate_solvability_rate_searchOptim(model, nb_try, device=torch.device("cp
     success = 0
     for i in range(nb_try):
         rubikcube = randomize_rubik_cube(nb_shuffle=nb_shuffle)
-        success += inference_model(model, rubikcube)
+        success += inference_model(model, rubikcube, device=device)
     return success / nb_try

@@ -11,7 +11,7 @@ class RubikTransformer_search(pl.LightningModule):
     RubikTransformer model for search among state node
     """
 
-    def __init__(self, hidden_size=256, num_layers=4, num_heads=4, dropout=0.1, color_embedding_size=256):
+    def __init__(self, hidden_size=256, num_layers=4, num_heads=4, dropout=0.1, color_embedding_size=5):
         """
         Initialize the model
         :param input_size: input size of the model
@@ -50,6 +50,9 @@ class RubikTransformer_search(pl.LightningModule):
         state : Tensor of dim (batch, nb_state, 3*3*6) with only int
         """
         batch_size, nb_state, nb_face = state.shape
+        
+        # get the device of state tensor
+        device = state.device
 
         # generate the color embedding to get a dimension of (batch, nb_state, nb_face, color_embedding_size)
         color_embedding = self.color_embedding(state)
@@ -63,6 +66,12 @@ class RubikTransformer_search(pl.LightningModule):
         # apply the first layer
         embedding = self.first_layer(embedding)
         embedding = torch.relu(embedding)
+
+        # we compute the mask to remove the padding
+        attn_mask = torch.tril(torch.ones((batch_size, nb_state)))
+
+        # send attn_mask to the device of state tensor
+        attn_mask = attn_mask.to(device)
 
         # we apply the encoder to the embedding to get a dimension of (batch, 9*6, hidden_size)
         embedding = self.encoder(embedding)
