@@ -10,7 +10,6 @@ Mastering Atari, Go, Chess and Shogi by Planning with a Learned Model
 We apply the algorithm to the rubik cube environment
 """
 
-from turtle import back
 import numpy as np
 import torch
 import torch.nn as nn

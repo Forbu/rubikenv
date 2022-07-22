@@ -45,7 +45,7 @@ class RubikTransformer_search(pl.LightningModule):
         self.loss_value = nn.MSELoss()
 
 
-    def forward(self, state):
+    def forward(self, state, training=True):
         """
         state : Tensor of dim (batch, nb_state, 3*3*6) with only int
         """
@@ -67,14 +67,17 @@ class RubikTransformer_search(pl.LightningModule):
         embedding = self.first_layer(embedding)
         embedding = torch.relu(embedding)
 
-        # we compute the mask to remove the padding
-        attn_mask = torch.tril(torch.ones((batch_size, nb_state)))
+        if training:
+            # we compute the mask to remove the padding
+            attn_mask = torch.tril(torch.ones((nb_state, nb_state)))
 
-        # send attn_mask to the device of state tensor
-        attn_mask = attn_mask.to(device)
+            # send attn_mask to the device of state tensor
+            attn_mask = attn_mask.to(device)
+        else:
+            attn_mask = None
 
         # we apply the encoder to the embedding to get a dimension of (batch, 9*6, hidden_size)
-        embedding = self.encoder(embedding)
+        embedding = self.encoder(embedding, mask=attn_mask)
 
         # we get the value
         value = self.value_layer(embedding)
