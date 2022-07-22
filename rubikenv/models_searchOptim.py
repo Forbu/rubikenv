@@ -69,7 +69,7 @@ class RubikTransformer_search(pl.LightningModule):
 
         if training:
             # we compute the mask to remove the padding
-            attn_mask = torch.tril(torch.ones((nb_state, nb_state)))
+            attn_mask = torch.tril(torch.ones((batch_size*self.num_heads, nb_state, nb_state)))
 
             # send attn_mask to the device of state tensor
             attn_mask = attn_mask.to(device)
